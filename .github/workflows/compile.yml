@@ -1,0 +1,40 @@
+name: Compile ESP32 Firmware
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Permet de lancer manuellement
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Arduino CLI
+      uses: arduino/setup-arduino-cli@v1
+      
+    - name: Install ESP32 core
+      run: |
+        arduino-cli config init
+        arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32@3.0.0
+        
+    - name: Install libraries
+      run: |
+        arduino-cli lib install "AsyncTCP"
+        arduino-cli lib install "ESPAsyncWebServer"
+        
+    - name: Compile sketch
+      run: |
+        arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi --output-dir ./build src/main.ino
+        
+    - name: Upload firmware
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32-firmware
+        path: |
+          build/*.bin
